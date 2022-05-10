@@ -15,7 +15,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <!-- Feel free to update to what you want, but remember that --> 
     <!-- ImageJ plugins require an underscore '_' in the name... --> 
     <groupId>net.ijtools</groupId>
-    <artifactId>RotCrop</artifactId>
+    <artifactId>Rotated_Crop</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
     <name>plugins/Rotated_Crop.jar</name>
