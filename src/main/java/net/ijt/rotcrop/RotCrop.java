@@ -61,16 +61,10 @@ public class RotCrop
         int sizeY = dims[1];
         int sizeZ = dims[2];
 
-        // create elementary transforms
-        AffineTransform3D trBoxCenter = AffineTransform3D.createTranslation(-sizeX / 2, -sizeY / 2, -sizeZ / 2);
-        AffineTransform3D rotZ = AffineTransform3D.createRotationOz(Math.toRadians(anglesInDegrees[0]));
-        AffineTransform3D rotY = AffineTransform3D.createRotationOy(Math.toRadians(anglesInDegrees[1]));
-        AffineTransform3D rotX = AffineTransform3D.createRotationOx(Math.toRadians(anglesInDegrees[2]));
-        AffineTransform3D trRefPoint = AffineTransform3D.createTranslation(refPoint.getX(), refPoint.getY(), refPoint.getZ());
-
-        // concatenate into global display-image-to-source-image transform
-        AffineTransform3D transfo = trRefPoint.concatenate(rotX).concatenate(rotY).concatenate(rotZ).concatenate(trBoxCenter);
-
+        // Computes the transform that will map indices from within result image
+        // into coordinates within source image
+        AffineTransform3D transfo = computeTransform(refPoint, dims, anglesInDegrees);
+        
         // Create interpolation class, that encapsulates both the image and the
         // transform
         Function3D interp = new TransformedImage3D(image, transfo);
@@ -90,5 +84,45 @@ public class RotCrop
             }
         }
         return res;
+    }
+    
+    public static final AffineTransform3D computeTransform(Point3D boxCenter, int[] boxSize, double[] anglesInDegrees)
+    {
+        // create a translation to put center of the box at the origin
+        int sizeX = boxSize[0];
+        int sizeY = boxSize[1];
+        int sizeZ = boxSize[2];
+        AffineTransform3D trBoxCenter = AffineTransform3D.createTranslation(-sizeX / 2, -sizeY / 2, -sizeZ / 2);
+        
+        // then, apply 3D rotation by Euler angles followed by translation to
+        // put origin (= box center) on the reference point
+        AffineTransform3D transfo = rotateAndShift(anglesInDegrees, boxCenter).concatenate(trBoxCenter);
+        
+//        System.out.println("transfo: " + transfo);
+        return transfo;
+    }
+    
+    /**
+     * Computes the box-to-world transform, that will transform coordinates from
+     * the box basis into the world (global) basis. The origin in the box basis
+     * will be mapped into the box center in the global basis.
+     * 
+     * @param anglesInDegrees
+     *            the three Euler angles (in degrees) that define the box
+     *            orientation.
+     * @param boxCenter
+     *            the center of the box
+     * @return an affine transform that can be used to compute coordinates of
+     *         box corners in global basis
+     */
+    public static final AffineTransform3D rotateAndShift(double[] anglesInDegrees, Point3D refPoint)
+    {
+        AffineTransform3D rotZ = AffineTransform3D.createRotationOz(Math.toRadians(anglesInDegrees[0]));
+        AffineTransform3D rotY = AffineTransform3D.createRotationOy(Math.toRadians(anglesInDegrees[1]));
+        AffineTransform3D rotX = AffineTransform3D.createRotationOx(Math.toRadians(anglesInDegrees[2]));
+        AffineTransform3D trans = AffineTransform3D.createTranslation(refPoint.getX(), refPoint.getY(), refPoint.getZ());
+        
+        // concatenate into global display-image-to-source-image transform
+        return trans.concatenate(rotZ).concatenate(rotY).concatenate(rotX);
     }
 }

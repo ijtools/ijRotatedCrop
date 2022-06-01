@@ -231,13 +231,23 @@ public class CropOrientedBox3DPlugin implements PlugIn
             if (this.resultFrame == null)
             {
                 this.resultFrame = new StackWindow(resultPlus);
+                this.resultFrame.setVisible(true);
             }
             
+            // keep current slice
+            int slice = this.resultFrame.getImagePlus().getSlice();
+            IJ.log("slice: " + slice);
+            
             // update display frame, keeping the previous magnification
-            double mag = this.resultFrame.getCanvas().getMagnification();
+//            double mag = this.resultFrame.getCanvas().getMagnification();
             this.resultFrame.setImage(resultPlus);
-            this.resultFrame.getCanvas().setMagnification(mag);
-            this.resultFrame.setVisible(true);
+
+            // restore previous display settings
+//            this.resultFrame.getCanvas().setMagnification(mag);
+//            this.resultFrame.showSlice(slice);
+//            resultPlus.setSlice(slice);
+            IJ.log("slice again2: " + this.resultFrame.getImagePlus().getSlice());
+            
         }
 
         @Override
