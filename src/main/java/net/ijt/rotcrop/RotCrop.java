@@ -8,6 +8,7 @@ import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
 import net.ijt.geom2d.AffineTransform2D;
 import net.ijt.geom2d.Point2D;
+import net.ijt.geom2d.Vector2D;
 import net.ijt.geom3d.AffineTransform3D;
 import net.ijt.geom3d.Point3D;
 import net.ijt.interp.Function2D;
@@ -84,6 +85,55 @@ public class RotCrop
             }
         }
         return res;
+    }
+    
+    public static final ImageProcessor tangentCrop(ImageProcessor image, Point2D refPoint, int[] dims, double gradientSigma)
+    {
+        // retrieve image dimensions
+        int sizeX = dims[0];
+        int sizeY = dims[1];
+        
+        LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
+        Vector2D grad = gradEst.evaluate(image, refPoint);
+        double angle = Math.atan2(grad.getY(), grad.getX()) - Math.PI/2;
+
+        // create elementary transforms
+        AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-sizeX / 2, -sizeY / 2);
+        AffineTransform2D rot = AffineTransform2D.createRotation(angle);
+        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
+
+        // concatenate into global display-image-to-source-image transform
+        AffineTransform2D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
+
+        // Create interpolation class, that encapsulates both the image and the
+        // transform
+        Function2D interp = new TransformedImage2D(image, transfo);
+
+        // allocate result image
+        ImageProcessor res = new ByteProcessor(sizeX, sizeY);
+
+        // iterate over pixel of target image
+        for (int y = 0; y < sizeY; y++)
+        {
+            for (int x = 0; x < sizeX; x++)
+            {
+                res.setf(x, y, (float) interp.evaluate(x, y));
+            }
+        }
+
+        return res;
+    }
+    
+    public static final AffineTransform2D computeTransform(int[] boxSize, Point2D refPoint, double boxAngle)
+    {
+        // create elementary transforms
+        AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-boxSize[0] * 0.5, -boxSize[1] * 0.5);
+        AffineTransform2D rot = AffineTransform2D.createRotation(boxAngle);
+        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
+
+        // concatenate into global display-image-to-source-image transform
+        AffineTransform2D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
+        return transfo;
     }
     
     public static final AffineTransform3D computeTransform(Point3D boxCenter, int[] boxSize, double[] anglesInDegrees)
