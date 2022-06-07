@@ -15,12 +15,16 @@ import java.util.Locale;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
+import ij.IJ;
 
 /**
  * @author dlegland
  *
  */
-public class ChooseNumberWidget implements ActionListener, KeyListener
+public class ChooseNumberWidget implements ActionListener, KeyListener, DocumentListener
 {
     // ====================================================
     // Class properties
@@ -69,6 +73,7 @@ public class ChooseNumberWidget implements ActionListener, KeyListener
         String text = doubleToString(initialValue);
         JTextField textField = new JTextField(text, 5);
         textField.addKeyListener(this);
+        textField.getDocument().addDocumentListener(this);
         return textField;
     }
     
@@ -96,47 +101,6 @@ public class ChooseNumberWidget implements ActionListener, KeyListener
 
     // ====================================================
     // Callbacks
-
-    @Override
-    public void actionPerformed(ActionEvent evt)
-    {
-        if (evt.getSource() == minusButton)
-        {
-            // decrement the value by 1
-            this.value = this.value - 1.0;
-            textField.setText(doubleToString(this.value));
-            fireValueChangeEvent();
-        }
-        else if (evt.getSource() == plusButton)
-        {
-            // increment the value by 1
-            this.value = this.value + 1.0;
-            textField.setText(doubleToString(this.value));
-            fireValueChangeEvent();
-        }
-    }
-    
-    
-    @Override
-    public void keyTyped(KeyEvent evt)
-    {
-        if (evt.getSource() == textField)
-        {
-            processTextUpdate((JTextField) evt.getSource());
-            fireValueChangeEvent();
-            textField.requestFocus();
-        }    
-    }
-
-    @Override
-    public void keyPressed(KeyEvent evt)
-    {
-    }
-
-    @Override
-    public void keyReleased(KeyEvent evt)
-    {
-    }
 
     private void processTextUpdate(JTextField textField)
     {
@@ -208,4 +172,84 @@ public class ChooseNumberWidget implements ActionListener, KeyListener
         }
 
     }
+
+    // ====================================================
+    // Callbacks
+    
+    @Override
+    public void actionPerformed(ActionEvent evt)
+    {
+        if (evt.getSource() == minusButton)
+        {
+            // decrement the value by 1
+            this.value = this.value - 1.0;
+            textField.setText(doubleToString(this.value));
+            fireValueChangeEvent();
+        }
+        else if (evt.getSource() == plusButton)
+        {
+            // increment the value by 1
+            this.value = this.value + 1.0;
+            textField.setText(doubleToString(this.value));
+            fireValueChangeEvent();
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent evt)
+    {
+        if (evt.getSource() == textField)
+        {
+            processTextUpdate((JTextField) evt.getSource());
+            fireValueChangeEvent();
+            textField.requestFocus();
+        }    
+    }
+
+    @Override
+    public void keyPressed(KeyEvent evt)
+    {
+    }
+
+    @Override
+    public void keyReleased(KeyEvent evt)
+    {
+    }
+
+    @Override
+    public void insertUpdate(DocumentEvent e)
+    {
+        processTextUpdate();
+    }
+
+    @Override
+    public void removeUpdate(DocumentEvent e)
+    {
+        processTextUpdate();
+    }
+
+    @Override
+    public void changedUpdate(DocumentEvent e)
+    {
+        processTextUpdate();
+    }
+    
+    private void processTextUpdate()
+    {
+        try
+        {
+            double newValue = Double.parseDouble(textField.getText());
+            ValueChangeEvent evt = new ValueChangeEvent(this, this.value);
+            for (Listener lst : listeners)
+            {
+                lst.valueChanged(evt);
+            }
+            this.value = newValue;
+        }
+        catch (NumberFormatException ex)
+        {
+            return;
+        }
+    }
+
 }

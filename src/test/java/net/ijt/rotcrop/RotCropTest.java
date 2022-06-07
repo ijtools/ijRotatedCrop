@@ -26,8 +26,6 @@ public class RotCropTest
     @Test
     public final void testComputeTransform()
     {
-        int[] imageDims = new int[] {200, 200, 200};
-        
         int[] boxDims = new int[] {20, 20, 20};
         Point3D refPoint = new Point3D(100.0, 100.0, 100.0);
         double[] rotAngles = new double[] {0.0, 90.0, 0.0};
@@ -46,7 +44,6 @@ public class RotCropTest
         for (Point3D corner : corners)
         {
             Point3D cornerT = transfo.transform(corner);
-            
             print("corner %s -> %s", formatCoords(corner), formatCoords(cornerT)); 
         }
         

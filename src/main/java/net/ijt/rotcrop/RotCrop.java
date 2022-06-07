@@ -3,6 +3,7 @@
  */
 package net.ijt.rotcrop;
 
+import ij.IJ;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
@@ -10,7 +11,9 @@ import net.ijt.geom2d.AffineTransform2D;
 import net.ijt.geom2d.Point2D;
 import net.ijt.geom2d.Vector2D;
 import net.ijt.geom3d.AffineTransform3D;
+import net.ijt.geom3d.DefaultAffineTransform3D;
 import net.ijt.geom3d.Point3D;
+import net.ijt.geom3d.Vector3D;
 import net.ijt.interp.Function2D;
 import net.ijt.interp.Function3D;
 import net.ijt.interp.TransformedImage2D;
@@ -152,6 +155,85 @@ public class RotCrop
         return transfo;
     }
     
+
+    public static final ImageStack tangentCrop(ImageStack image, Point3D refPoint, int[] dims, double gradientSigma)
+    {
+        // retrieve image dimensions
+        int sizeX = dims[0];
+        int sizeY = dims[1];
+        int sizeZ = dims[2];
+        
+        // evaluate gradient around chosen point
+        LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
+        Vector3D grad = gradEst.evaluate(image, refPoint).normalize();
+        IJ.log("  Gradient: " + grad);
+        
+        // find the basis vector the less orthogonal to the gradient
+        Vector3D[] basisVectors = new Vector3D[] {new Vector3D(1, 0, 0), new Vector3D(0, 1, 0), new Vector3D(0, 0, 1)};
+        Vector3D[] crossProds = new Vector3D[3];
+        double maxVal = 0.0;
+        int indMax = 1;
+        for (int i = 0; i < 3; i++)
+        {
+            crossProds[i] = Vector3D.crossProduct(grad, basisVectors[i]);
+            double norm = crossProds[i].norm(); 
+            if (norm > maxVal)
+            {
+                maxVal = norm;
+                indMax = i;
+            }
+        }
+        
+        // identify two vectors orthogonal to the outwards normal
+        Vector3D vt1 = crossProds[indMax];
+        Vector3D vt2 = Vector3D.crossProduct(grad, vt1);
+        IJ.log("  vt1: " + vt1);
+        IJ.log("  vt2: " + vt2);
+        
+        // convert eigen vectors to rotation matrix
+        // (concatenate column vectors corresponding to eigen vectors, and transpose)
+        double m00 = vt1.getX();
+        double m01 = vt1.getY();
+        double m02 = vt1.getZ();
+        double m10 = vt2.getX();
+        double m11 = vt2.getY();
+        double m12 = vt2.getZ();
+        double m20 = grad.getX();
+        double m21 = grad.getY();
+        double m22 = grad.getZ();
+        AffineTransform3D rot = new DefaultAffineTransform3D(m00, m10, m20, 0,  m01, m11, m21, 0,  m02, m12, m22, 0);
+         
+        // create elementary transforms
+        AffineTransform3D trBoxCenter = AffineTransform3D.createTranslation(-(sizeX - 1) * 0.5, -(sizeY - 1) * 0.5, -(sizeZ - 1) * 0.5);
+        AffineTransform3D trRefPoint = AffineTransform3D.createTranslation(refPoint);
+
+        // concatenate into global display-image-to-source-image transform
+        // create the transform matrix that maps from box coords to global coords
+        AffineTransform3D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
+
+
+        // Create interpolation class, that encapsulates both the image and the
+        // transform
+        Function3D interp = new TransformedImage3D(image, transfo);
+
+        // allocate result image
+        ImageStack res = ImageStack.create(sizeX, sizeY, sizeZ, 8);
+
+        // iterate over voxel of target image
+        for (int z = 0; z < sizeZ; z++)
+        {
+            for (int y = 0; y < sizeY; y++)
+            {
+                for (int x = 0; x < sizeX; x++)
+                {
+                    res.setVoxel(x, y, z, interp.evaluate(x, y, z));
+                }
+            }
+        }
+        
+        return res;
+    }
+    
     /**
      * Computes the box-to-world transform, that will transform coordinates from
      * the box basis into the world (global) basis. The origin in the box basis
@@ -170,9 +252,54 @@ public class RotCrop
         AffineTransform3D rotZ = AffineTransform3D.createRotationOz(Math.toRadians(anglesInDegrees[0]));
         AffineTransform3D rotY = AffineTransform3D.createRotationOy(Math.toRadians(anglesInDegrees[1]));
         AffineTransform3D rotX = AffineTransform3D.createRotationOx(Math.toRadians(anglesInDegrees[2]));
-        AffineTransform3D trans = AffineTransform3D.createTranslation(refPoint.getX(), refPoint.getY(), refPoint.getZ());
+        AffineTransform3D trans = AffineTransform3D.createTranslation(refPoint);
         
         // concatenate into global display-image-to-source-image transform
         return trans.concatenate(rotZ).concatenate(rotY).concatenate(rotX);
     }
+    
+    public static final ImageProcessor orthoSlices(ImageStack stack)
+    {
+        int sizeX = stack.getWidth();
+        int sizeY = stack.getHeight();
+        int sizeZ = stack.getSize();
+        
+        int posX = sizeX / 2;
+        int posY = sizeY / 2;
+        int posZ = sizeZ / 2;
+        
+        int sizeX2 = 2 * sizeX + sizeY;
+        int sizeY2 = Math.max(sizeY,  sizeZ);
+        ImageProcessor res = new ByteProcessor(sizeX2, sizeY2);
+        
+        // add XY slice
+        for (int y = 0; y < sizeY; y++)
+        {
+            for (int x = 0; x < sizeX; x++)
+            {
+                res.set(x, y, (int) stack.getVoxel(x, y, posZ));
+            }
+        }
+        
+        // add XZ slice
+        for (int z = 0; z < sizeZ; z++)
+        {
+            for (int x = 0; x < sizeX; x++)
+            {
+                res.set(x + sizeX, z, (int) stack.getVoxel(x, posY, z));
+            }
+        }
+        
+        // add YZ slice
+        for (int z = 0; z < sizeZ; z++)
+        {
+            for (int y = 0; y < sizeY; y++)
+            {
+                res.set(y + 2 * sizeX, z, (int) stack.getVoxel(posX, y, z));
+            }
+        }
+        
+        return res;
+    }
+
 }

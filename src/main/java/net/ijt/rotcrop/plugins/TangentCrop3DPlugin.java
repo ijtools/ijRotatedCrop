@@ -21,6 +21,7 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.GUI;
+import ij.gui.ImageWindow;
 import ij.gui.StackWindow;
 import ij.plugin.PlugIn;
 import net.ijt.geom3d.Point3D;
@@ -28,7 +29,8 @@ import net.ijt.rotcrop.RotCrop;
 import net.ijt.rotcrop.plugins.ChooseNumberWidget.ValueChangeEvent;
 
 /**
- * Plugin for generating a rotated crop from an image.
+ * Plugin for generating a rotated crop from an image, by estimating the crop
+ * orientation from gradient around the center point.
  * 
  * The main job of the plugin is the create and display an instance of the
  * Frame. The Frame will be responsible for storing the state and calling the
@@ -37,12 +39,12 @@ import net.ijt.rotcrop.plugins.ChooseNumberWidget.ValueChangeEvent;
  * @author dlegland
  *
  */
-public class CropOrientedBox3DPlugin implements PlugIn
+public class TangentCrop3DPlugin implements PlugIn
 {
     @Override
     public void run(String arg)
     {
-        IJ.log("run the crop oriented box plugin");
+        IJ.log("run the tangent crop plugin");
         
         ImagePlus imagePlus = IJ.getImage();
         
@@ -61,7 +63,7 @@ public class CropOrientedBox3DPlugin implements PlugIn
         Frame frame = new Frame(imagePlus, refPoint);
         frame.setVisible(true);
     }
-    
+
     public class Frame extends JFrame implements ActionListener, ChooseNumberWidget.Listener
     {
         // ====================================================
@@ -83,9 +85,8 @@ public class CropOrientedBox3DPlugin implements PlugIn
         double boxCenterX;
         double boxCenterY;
         double boxCenterZ;
-        double boxRotZ;
-        double boxRotY;
-        double boxRotX;
+        
+        double gradientRange;
         // TODO: create a "Box"/"OrientedBox" inner class?
 
 
@@ -98,15 +99,13 @@ public class CropOrientedBox3DPlugin implements PlugIn
         ChooseNumberWidget boxCenterXWidget;
         ChooseNumberWidget boxCenterYWidget;
         ChooseNumberWidget boxCenterZWidget;
-        ChooseNumberWidget boxRotZWidget;
-        ChooseNumberWidget boxRotYWidget;
-        ChooseNumberWidget boxRotXWidget;
+        ChooseNumberWidget gradientRangeWidget;
 
         JCheckBox autoUpdateCheckBox;
         JButton runButton;
         
         /** The frame used to display the result of rotated crop. */
-        StackWindow resultFrame = null;
+        ImageWindow resultFrame = null;
         
 
         // ====================================================
@@ -114,7 +113,7 @@ public class CropOrientedBox3DPlugin implements PlugIn
 
         public Frame(ImagePlus imagePlus, Point3D refPoint)
         {
-            super("Crop Oriented Box");
+            super("Tangent Box");
             this.imagePlus = imagePlus;
             
             // init default values
@@ -124,9 +123,7 @@ public class CropOrientedBox3DPlugin implements PlugIn
             boxCenterX = refPoint.getX();
             boxCenterY = refPoint.getY();
             boxCenterZ = refPoint.getZ();
-            boxRotZ = 0.0;
-            boxRotY = 0.0;
-            boxRotX = 0.0;
+            gradientRange = 3.0;
 
             setupWidgets();
             setupLayout();
@@ -160,15 +157,8 @@ public class CropOrientedBox3DPlugin implements PlugIn
             boxCenterZWidget = new ChooseNumberWidget(boxCenterZ);
             boxCenterZWidget.addListener(this);
             
-            
-            boxRotZWidget = new ChooseNumberWidget(boxRotZ);
-            boxRotZWidget.addListener(this);
-            
-            boxRotYWidget = new ChooseNumberWidget(boxRotY);
-            boxRotYWidget.addListener(this);
-            
-            boxRotXWidget = new ChooseNumberWidget(boxRotX);
-            boxRotXWidget.addListener(this);
+            gradientRangeWidget = new ChooseNumberWidget(gradientRange);
+            gradientRangeWidget.addListener(this);
             
             autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
         }
@@ -200,15 +190,11 @@ public class CropOrientedBox3DPlugin implements PlugIn
             boxPanel.add(boxCenterZWidget.getPanel());
             mainPanel.add(boxPanel);
             
-            JPanel rotationPanel = GuiHelper.createOptionsPanel("Box Rotation");
-            rotationPanel.setLayout(new GridLayout(3, 2));
-            rotationPanel.add(new JLabel("Rotation Z:"));
-            rotationPanel.add(boxRotZWidget.getPanel());
-            rotationPanel.add(new JLabel("Rotation Y:"));
-            rotationPanel.add(boxRotYWidget.getPanel());
-            rotationPanel.add(new JLabel("Rotation X:"));
-            rotationPanel.add(boxRotXWidget.getPanel());
-            mainPanel.add(rotationPanel);
+            JPanel gradientPanel = GuiHelper.createOptionsPanel("Gradient");
+            gradientPanel.setLayout(new GridLayout(1, 2));
+            gradientPanel.add(new JLabel("Gradient Range:"));
+            gradientPanel.add(gradientRangeWidget.getPanel());
+            mainPanel.add(gradientPanel);
             
             // also add buttons
             GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, autoUpdateCheckBox, runButton);
@@ -222,9 +208,16 @@ public class CropOrientedBox3DPlugin implements PlugIn
         {
             int[] dims = new int[] {boxSizeX, boxSizeY, boxSizeZ};
             Point3D cropCenter = new Point3D(boxCenterX, boxCenterY, boxCenterZ);
-            double[] angles = new double[] {boxRotZ, boxRotY, boxRotX};
+            
+            IJ.log("Rot Crop With params: ");
+            IJ.log(String.format("  box size: %d x %d x %d", boxSizeX, boxSizeY, boxSizeZ));
+            IJ.log(String.format("  refPoint: " + cropCenter));
+            IJ.log(String.format("  sigma: %5.2f", gradientRange));
+            
+//            double[] angles = new double[] {boxRotZ, boxRotY, boxRotX};
 
-            ImageStack res = RotCrop.rotatedCrop(imagePlus.getStack(), dims, cropCenter, angles);
+            
+            ImageStack res = RotCrop.tangentCrop(imagePlus.getStack(), cropCenter, dims, gradientRange);
             ImagePlus resultPlus = new ImagePlus("Result", res);
             
             // retrieve frame for displaying result
@@ -235,8 +228,8 @@ public class CropOrientedBox3DPlugin implements PlugIn
             }
             
             // keep current slice
-            int slice = this.resultFrame.getImagePlus().getSlice();
-            IJ.log("slice: " + slice);
+//            int slice = this.resultFrame.getImagePlus().getSlice();
+//            IJ.log("slice: " + slice);
             
             // update display frame, keeping the previous magnification
 //            double mag = this.resultFrame.getCanvas().getMagnification();
@@ -246,8 +239,8 @@ public class CropOrientedBox3DPlugin implements PlugIn
 //            this.resultFrame.getCanvas().setMagnification(mag);
 //            this.resultFrame.showSlice(slice);
 //            resultPlus.setSlice(slice);
-            IJ.log("slice again2: " + this.resultFrame.getImagePlus().getSlice());
-            
+//            IJ.log("slice again2: " + this.resultFrame.getImagePlus().getSlice());
+
         }
 
         @Override
@@ -283,20 +276,13 @@ public class CropOrientedBox3DPlugin implements PlugIn
             {
                 this.boxCenterZ = (int) evt.getNewValue();
             }
-            else if (evt.getSource() == boxRotZWidget)
+            else if (evt.getSource() == gradientRangeWidget)
             {
-                this.boxRotZ = (int) evt.getNewValue();
-            }
-            else if (evt.getSource() == boxRotYWidget)
-            {
-                this.boxRotY = (int) evt.getNewValue();
-            }
-            else if (evt.getSource() == boxRotXWidget)
-            {
-                this.boxRotX = (int) evt.getNewValue();
+                this.gradientRange = evt.getNewValue();
             }
             else
             {
+                System.err.println("TangentCrop3DPlugin: unknown widget updated...");
                 return;
             }
             
