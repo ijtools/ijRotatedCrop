@@ -28,7 +28,11 @@ import ij.gui.GUI;
 import ij.gui.ImageWindow;
 import ij.gui.StackWindow;
 import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+import net.ijt.geom3d.AffineTransform3D;
 import net.ijt.geom3d.Point3D;
+import net.ijt.interp.Function3D;
+import net.ijt.interp.TransformedImage3D;
 import net.ijt.rotcrop.RotCrop;
 
 /**
@@ -104,11 +108,12 @@ public class TangentCrop3DPlugin implements PlugIn
         JSpinner boxCenterZWidget;
         JSpinner gradientRangeWidget;
 
-        JCheckBox autoUpdateCheckBox;
+        JCheckBox autoPreviewCheckBox;
+        JButton previewButton;
         JButton runButton;
         
         /** The frame used to display the result of rotated crop. */
-        ImageWindow resultFrame = null;
+        ImageWindow previewFrame = null;
         
 
         // ====================================================
@@ -116,13 +121,13 @@ public class TangentCrop3DPlugin implements PlugIn
 
         public Frame(ImagePlus imagePlus, Point3D refPoint)
         {
-            super("Tangent Box");
+            super("Tangent Crop 3D");
             this.imagePlus = imagePlus;
             
             // init default values
-            boxSizeX = 50;
-            boxSizeY = 50;
-            boxSizeZ = 50;
+            boxSizeX = 100;
+            boxSizeY = 100;
+            boxSizeZ = 100;
             boxCenterX = refPoint.getX();
             boxCenterY = refPoint.getY();
             boxCenterZ = refPoint.getZ();
@@ -139,9 +144,6 @@ public class TangentCrop3DPlugin implements PlugIn
 
         private void setupWidgets()
         {
-            runButton = new JButton("Run!");
-            runButton.addActionListener(this);
-            
             sizeXWidget = new JSpinner(new SpinnerNumberModel(boxSizeX, 0, 10000, 1));
             sizeXWidget.addChangeListener(this);
             
@@ -163,7 +165,13 @@ public class TangentCrop3DPlugin implements PlugIn
             gradientRangeWidget = new JSpinner(new SpinnerNumberModel(gradientRange, 0, 10000, 1));
             gradientRangeWidget.addChangeListener(this);
             
-            autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
+            autoPreviewCheckBox = new JCheckBox("Auto-Update", false);
+            previewButton = new JButton("Preview");
+            previewButton.addActionListener(this);
+            
+            runButton = new JButton("Create Result Image");
+            runButton.addActionListener(this);
+            
         }
 
         private void setupLayout()
@@ -200,14 +208,44 @@ public class TangentCrop3DPlugin implements PlugIn
             mainPanel.add(gradientPanel);
             
             // also add buttons
-            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, autoUpdateCheckBox, runButton);
+            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, autoPreviewCheckBox, previewButton);
+            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, runButton);
             
             // put main panel in the middle of frame
             this.setLayout(new BorderLayout());
             this.add(mainPanel, BorderLayout.CENTER);
         }
         
-        public void updateCrop()
+        public void updatePreview()
+        {
+            // retrieve data
+            ImageStack stack = imagePlus.getStack();
+            int[] dims = new int[] {boxSizeX, boxSizeY, boxSizeZ};
+            Point3D cropCenter = new Point3D(boxCenterX, boxCenterY, boxCenterZ);
+            
+            // compute the transform
+            AffineTransform3D transfo = RotCrop.computeTangentCropTransform(stack, cropCenter, dims, gradientRange);
+            
+            // Create interpolation class, that encapsulates both the image and the
+            // transform
+            Function3D interp = new TransformedImage3D(stack, transfo);
+
+            ImageProcessor preview = RotCrop.orthoSlices(interp, dims);
+            ImagePlus previewPlus = new ImagePlus("Tangent Crop Preview", preview);
+
+            // retrieve frame for displaying result
+            if (this.previewFrame == null)
+            {
+                this.previewFrame = new ImageWindow(previewPlus);
+            }
+            // update display frame, keeping the previous magnification
+            double mag = this.previewFrame.getCanvas().getMagnification();
+            this.previewFrame.setImage(previewPlus);
+            this.previewFrame.getCanvas().setMagnification(mag);
+            this.previewFrame.setVisible(true);
+        }
+        
+        public void displayResult()
         {
             int[] dims = new int[] {boxSizeX, boxSizeY, boxSizeZ};
             Point3D cropCenter = new Point3D(boxCenterX, boxCenterY, boxCenterZ);
@@ -217,39 +255,31 @@ public class TangentCrop3DPlugin implements PlugIn
             IJ.log(String.format("  refPoint: " + cropCenter));
             IJ.log(String.format("  sigma: %5.2f", gradientRange));
             
-//            double[] angles = new double[] {boxRotZ, boxRotY, boxRotX};
-
-            
+            // compute the crop
             ImageStack res = RotCrop.tangentCrop(imagePlus.getStack(), cropCenter, dims, gradientRange);
             ImagePlus resultPlus = new ImagePlus("Result", res);
             
-            // retrieve frame for displaying result
-            if (this.resultFrame == null)
-            {
-                this.resultFrame = new StackWindow(resultPlus);
-                this.resultFrame.setVisible(true);
-            }
-            
-            // keep current slice
-//            int slice = this.resultFrame.getImagePlus().getSlice();
-//            IJ.log("slice: " + slice);
-            
-            // update display frame, keeping the previous magnification
-//            double mag = this.resultFrame.getCanvas().getMagnification();
-            this.resultFrame.setImage(resultPlus);
-
-            // restore previous display settings
-//            this.resultFrame.getCanvas().setMagnification(mag);
-//            this.resultFrame.showSlice(slice);
-//            resultPlus.setSlice(slice);
-//            IJ.log("slice again2: " + this.resultFrame.getImagePlus().getSlice());
-
+            // display in a new frame
+            ImageWindow resultFrame = new StackWindow(resultPlus);
+            resultFrame.setVisible(true);
         }
 
         @Override
-        public void actionPerformed(ActionEvent e)
+        public void actionPerformed(ActionEvent evt)
         {
-            updateCrop();
+            if (evt.getSource() == previewButton)
+            {
+                updatePreview();
+            }
+            else if (evt.getSource() == runButton)
+            {
+                displayResult();
+            }
+            else
+            {
+                System.err.println("TangentCrop3DPlugin: unknown widget updated...");
+                return;
+            }
         }
 
         @Override
@@ -289,9 +319,9 @@ public class TangentCrop3DPlugin implements PlugIn
                 return;
             }
             
-            if (this.autoUpdateCheckBox.isSelected())
+            if (this.autoPreviewCheckBox.isSelected())
             {
-                updateCrop();
+                updatePreview();
             }
         }
     }
