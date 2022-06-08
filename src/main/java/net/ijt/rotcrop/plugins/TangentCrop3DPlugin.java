@@ -15,7 +15,11 @@ import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -26,7 +30,6 @@ import ij.gui.StackWindow;
 import ij.plugin.PlugIn;
 import net.ijt.geom3d.Point3D;
 import net.ijt.rotcrop.RotCrop;
-import net.ijt.rotcrop.plugins.ChooseNumberWidget.ValueChangeEvent;
 
 /**
  * Plugin for generating a rotated crop from an image, by estimating the crop
@@ -64,7 +67,7 @@ public class TangentCrop3DPlugin implements PlugIn
         frame.setVisible(true);
     }
 
-    public class Frame extends JFrame implements ActionListener, ChooseNumberWidget.Listener
+    public class Frame extends JFrame implements ActionListener, ChangeListener
     {
         // ====================================================
         // Static fields
@@ -93,13 +96,13 @@ public class TangentCrop3DPlugin implements PlugIn
         // ====================================================
         // GUI Widgets
         
-        ChooseNumberWidget sizeXWidget;
-        ChooseNumberWidget sizeYWidget;
-        ChooseNumberWidget sizeZWidget;
-        ChooseNumberWidget boxCenterXWidget;
-        ChooseNumberWidget boxCenterYWidget;
-        ChooseNumberWidget boxCenterZWidget;
-        ChooseNumberWidget gradientRangeWidget;
+        JSpinner sizeXWidget;
+        JSpinner sizeYWidget;
+        JSpinner sizeZWidget;
+        JSpinner boxCenterXWidget;
+        JSpinner boxCenterYWidget;
+        JSpinner boxCenterZWidget;
+        JSpinner gradientRangeWidget;
 
         JCheckBox autoUpdateCheckBox;
         JButton runButton;
@@ -139,26 +142,26 @@ public class TangentCrop3DPlugin implements PlugIn
             runButton = new JButton("Run!");
             runButton.addActionListener(this);
             
-            sizeXWidget = new ChooseNumberWidget(boxSizeX, 0);
-            sizeXWidget.addListener(this);
+            sizeXWidget = new JSpinner(new SpinnerNumberModel(boxSizeX, 0, 10000, 1));
+            sizeXWidget.addChangeListener(this);
             
-            sizeYWidget = new ChooseNumberWidget(boxSizeY, 0);
-            sizeYWidget.addListener(this);
+            sizeYWidget = new JSpinner(new SpinnerNumberModel(boxSizeY, 0, 10000, 1));
+            sizeYWidget.addChangeListener(this);
             
-            sizeZWidget = new ChooseNumberWidget(boxSizeZ, 0);
-            sizeZWidget.addListener(this);
+            sizeZWidget = new JSpinner(new SpinnerNumberModel(boxSizeZ, 0, 10000, 1));
+            sizeZWidget.addChangeListener(this);
             
-            boxCenterXWidget = new ChooseNumberWidget(boxCenterX);
-            boxCenterXWidget.addListener(this);
+            boxCenterXWidget = new JSpinner(new SpinnerNumberModel(boxCenterX, 0, 10000, 1));
+            boxCenterXWidget.addChangeListener(this);
             
-            boxCenterYWidget = new ChooseNumberWidget(boxCenterY);
-            boxCenterYWidget.addListener(this);
+            boxCenterYWidget = new JSpinner(new SpinnerNumberModel(boxCenterY, 0, 10000, 1));
+            boxCenterYWidget.addChangeListener(this);
             
-            boxCenterZWidget = new ChooseNumberWidget(boxCenterZ);
-            boxCenterZWidget.addListener(this);
+            boxCenterZWidget = new JSpinner(new SpinnerNumberModel(boxCenterZ, 0, 10000, 1));
+            boxCenterZWidget.addChangeListener(this);
             
-            gradientRangeWidget = new ChooseNumberWidget(gradientRange);
-            gradientRangeWidget.addListener(this);
+            gradientRangeWidget = new JSpinner(new SpinnerNumberModel(gradientRange, 0, 10000, 1));
+            gradientRangeWidget.addChangeListener(this);
             
             autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
         }
@@ -173,27 +176,27 @@ public class TangentCrop3DPlugin implements PlugIn
             JPanel sizePanel = GuiHelper.createOptionsPanel("Result Size");
             sizePanel.setLayout(new GridLayout(3, 2));
             sizePanel.add(new JLabel("Size X:"));
-            sizePanel.add(sizeXWidget.getPanel());
+            sizePanel.add(sizeXWidget);
             sizePanel.add(new JLabel("Size Y:"));
-            sizePanel.add(sizeYWidget.getPanel());
+            sizePanel.add(sizeYWidget);
             sizePanel.add(new JLabel("Size Z:"));
-            sizePanel.add(sizeZWidget.getPanel());
+            sizePanel.add(sizeZWidget);
             mainPanel.add(sizePanel);
             
             JPanel boxPanel = GuiHelper.createOptionsPanel("Box Center");
             boxPanel.setLayout(new GridLayout(3, 2));
             boxPanel.add(new JLabel("Center X:"));
-            boxPanel.add(boxCenterXWidget.getPanel());
+            boxPanel.add(boxCenterXWidget);
             boxPanel.add(new JLabel("Center Y:"));
-            boxPanel.add(boxCenterYWidget.getPanel());
+            boxPanel.add(boxCenterYWidget);
             boxPanel.add(new JLabel("Center Z:"));
-            boxPanel.add(boxCenterZWidget.getPanel());
+            boxPanel.add(boxCenterZWidget);
             mainPanel.add(boxPanel);
             
             JPanel gradientPanel = GuiHelper.createOptionsPanel("Gradient");
             gradientPanel.setLayout(new GridLayout(1, 2));
             gradientPanel.add(new JLabel("Gradient Range:"));
-            gradientPanel.add(gradientRangeWidget.getPanel());
+            gradientPanel.add(gradientRangeWidget);
             mainPanel.add(gradientPanel);
             
             // also add buttons
@@ -250,35 +253,35 @@ public class TangentCrop3DPlugin implements PlugIn
         }
 
         @Override
-        public void valueChanged(ValueChangeEvent evt)
+        public void stateChanged(ChangeEvent evt)
         {
             if (evt.getSource() == sizeXWidget)
             {
-                this.boxSizeX = (int) evt.getNewValue();
+                this.boxSizeX = ((SpinnerNumberModel) sizeXWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == sizeYWidget)
             {
-                this.boxSizeY = (int) evt.getNewValue();
+                this.boxSizeY = ((SpinnerNumberModel) sizeYWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == sizeZWidget)
             {
-                this.boxSizeZ = (int) evt.getNewValue();
+                this.boxSizeZ = ((SpinnerNumberModel) sizeZWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == boxCenterXWidget)
             {
-                this.boxCenterX = (int) evt.getNewValue();
+                this.boxCenterX = ((SpinnerNumberModel) boxCenterXWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxCenterYWidget)
             {
-                this.boxCenterY = (int) evt.getNewValue();
+                this.boxCenterY = ((SpinnerNumberModel) boxCenterYWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxCenterZWidget)
             {
-                this.boxCenterZ = (int) evt.getNewValue();
+                this.boxCenterZ = ((SpinnerNumberModel) boxCenterZWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == gradientRangeWidget)
             {
-                this.gradientRange = evt.getNewValue();
+                this.gradientRange = ((SpinnerNumberModel) gradientRangeWidget.getModel()).getNumber().doubleValue();
             }
             else
             {

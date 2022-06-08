@@ -15,7 +15,11 @@ import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -25,7 +29,6 @@ import ij.gui.StackWindow;
 import ij.plugin.PlugIn;
 import net.ijt.geom3d.Point3D;
 import net.ijt.rotcrop.RotCrop;
-import net.ijt.rotcrop.plugins.ChooseNumberWidget.ValueChangeEvent;
 
 /**
  * Plugin for generating a rotated crop from an image.
@@ -62,7 +65,7 @@ public class CropOrientedBox3DPlugin implements PlugIn
         frame.setVisible(true);
     }
     
-    public class Frame extends JFrame implements ActionListener, ChooseNumberWidget.Listener
+    public class Frame extends JFrame implements ActionListener, ChangeListener
     {
         // ====================================================
         // Static fields
@@ -92,15 +95,15 @@ public class CropOrientedBox3DPlugin implements PlugIn
         // ====================================================
         // GUI Widgets
         
-        ChooseNumberWidget sizeXWidget;
-        ChooseNumberWidget sizeYWidget;
-        ChooseNumberWidget sizeZWidget;
-        ChooseNumberWidget boxCenterXWidget;
-        ChooseNumberWidget boxCenterYWidget;
-        ChooseNumberWidget boxCenterZWidget;
-        ChooseNumberWidget boxRotZWidget;
-        ChooseNumberWidget boxRotYWidget;
-        ChooseNumberWidget boxRotXWidget;
+        JSpinner sizeXWidget;
+        JSpinner sizeYWidget;
+        JSpinner sizeZWidget;
+        JSpinner boxCenterXWidget;
+        JSpinner boxCenterYWidget;
+        JSpinner boxCenterZWidget;
+        JSpinner boxRotZWidget;
+        JSpinner boxRotYWidget;
+        JSpinner boxRotXWidget;
 
         JCheckBox autoUpdateCheckBox;
         JButton runButton;
@@ -142,33 +145,33 @@ public class CropOrientedBox3DPlugin implements PlugIn
             runButton = new JButton("Run!");
             runButton.addActionListener(this);
             
-            sizeXWidget = new ChooseNumberWidget(boxSizeX, 0);
-            sizeXWidget.addListener(this);
+            sizeXWidget = new JSpinner(new SpinnerNumberModel(boxSizeX, 0, 10000, 1));
+            sizeXWidget.addChangeListener(this);
             
-            sizeYWidget = new ChooseNumberWidget(boxSizeY, 0);
-            sizeYWidget.addListener(this);
+            sizeYWidget = new JSpinner(new SpinnerNumberModel(boxSizeY, 0, 10000, 1));
+            sizeYWidget.addChangeListener(this);
             
-            sizeZWidget = new ChooseNumberWidget(boxSizeZ, 0);
-            sizeZWidget.addListener(this);
+            sizeZWidget = new JSpinner(new SpinnerNumberModel(boxSizeZ, 0, 10000, 1));
+            sizeZWidget.addChangeListener(this);
             
-            boxCenterXWidget = new ChooseNumberWidget(boxCenterX);
-            boxCenterXWidget.addListener(this);
+            boxCenterXWidget = new JSpinner(new SpinnerNumberModel(boxCenterX, 0, 10000, 1));
+            boxCenterXWidget.addChangeListener(this);
             
-            boxCenterYWidget = new ChooseNumberWidget(boxCenterY);
-            boxCenterYWidget.addListener(this);
+            boxCenterYWidget = new JSpinner(new SpinnerNumberModel(boxCenterY, 0, 10000, 1));
+            boxCenterYWidget.addChangeListener(this);
             
-            boxCenterZWidget = new ChooseNumberWidget(boxCenterZ);
-            boxCenterZWidget.addListener(this);
+            boxCenterZWidget = new JSpinner(new SpinnerNumberModel(boxCenterZ, 0, 10000, 1));
+            boxCenterZWidget.addChangeListener(this);
             
             
-            boxRotZWidget = new ChooseNumberWidget(boxRotZ);
-            boxRotZWidget.addListener(this);
+            boxRotZWidget = new JSpinner(new SpinnerNumberModel(boxRotZ, -180, 180, 1));
+            boxRotZWidget.addChangeListener(this);
             
-            boxRotYWidget = new ChooseNumberWidget(boxRotY);
-            boxRotYWidget.addListener(this);
+            boxRotYWidget = new JSpinner(new SpinnerNumberModel(boxRotY, -180, 180, 1));
+            boxRotYWidget.addChangeListener(this);
             
-            boxRotXWidget = new ChooseNumberWidget(boxRotX);
-            boxRotXWidget.addListener(this);
+            boxRotXWidget = new JSpinner(new SpinnerNumberModel(boxRotX, -180, 180, 1));
+            boxRotXWidget.addChangeListener(this);
             
             autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
         }
@@ -183,31 +186,31 @@ public class CropOrientedBox3DPlugin implements PlugIn
             JPanel sizePanel = GuiHelper.createOptionsPanel("Result Size");
             sizePanel.setLayout(new GridLayout(3, 2));
             sizePanel.add(new JLabel("Size X:"));
-            sizePanel.add(sizeXWidget.getPanel());
+            sizePanel.add(sizeXWidget);
             sizePanel.add(new JLabel("Size Y:"));
-            sizePanel.add(sizeYWidget.getPanel());
+            sizePanel.add(sizeYWidget);
             sizePanel.add(new JLabel("Size Z:"));
-            sizePanel.add(sizeZWidget.getPanel());
+            sizePanel.add(sizeZWidget);
             mainPanel.add(sizePanel);
             
             JPanel boxPanel = GuiHelper.createOptionsPanel("Box Center");
             boxPanel.setLayout(new GridLayout(3, 2));
             boxPanel.add(new JLabel("Center X:"));
-            boxPanel.add(boxCenterXWidget.getPanel());
+            boxPanel.add(boxCenterXWidget);
             boxPanel.add(new JLabel("Center Y:"));
-            boxPanel.add(boxCenterYWidget.getPanel());
+            boxPanel.add(boxCenterYWidget);
             boxPanel.add(new JLabel("Center Z:"));
-            boxPanel.add(boxCenterZWidget.getPanel());
+            boxPanel.add(boxCenterZWidget);
             mainPanel.add(boxPanel);
             
             JPanel rotationPanel = GuiHelper.createOptionsPanel("Box Rotation");
             rotationPanel.setLayout(new GridLayout(3, 2));
             rotationPanel.add(new JLabel("Rotation Z:"));
-            rotationPanel.add(boxRotZWidget.getPanel());
+            rotationPanel.add(boxRotZWidget);
             rotationPanel.add(new JLabel("Rotation Y:"));
-            rotationPanel.add(boxRotYWidget.getPanel());
+            rotationPanel.add(boxRotYWidget);
             rotationPanel.add(new JLabel("Rotation X:"));
-            rotationPanel.add(boxRotXWidget.getPanel());
+            rotationPanel.add(boxRotXWidget);
             mainPanel.add(rotationPanel);
             
             // also add buttons
@@ -257,46 +260,47 @@ public class CropOrientedBox3DPlugin implements PlugIn
         }
 
         @Override
-        public void valueChanged(ValueChangeEvent evt)
+        public void stateChanged(ChangeEvent evt)
         {
             if (evt.getSource() == sizeXWidget)
             {
-                this.boxSizeX = (int) evt.getNewValue();
+                this.boxSizeX = ((SpinnerNumberModel) sizeXWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == sizeYWidget)
             {
-                this.boxSizeY = (int) evt.getNewValue();
+                this.boxSizeY = ((SpinnerNumberModel) sizeYWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == sizeZWidget)
             {
-                this.boxSizeZ = (int) evt.getNewValue();
+                this.boxSizeZ = ((SpinnerNumberModel) sizeZWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == boxCenterXWidget)
             {
-                this.boxCenterX = (int) evt.getNewValue();
+                this.boxCenterX = ((SpinnerNumberModel) boxCenterXWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxCenterYWidget)
             {
-                this.boxCenterY = (int) evt.getNewValue();
+                this.boxCenterY = ((SpinnerNumberModel) boxCenterYWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxCenterZWidget)
             {
-                this.boxCenterZ = (int) evt.getNewValue();
+                this.boxCenterZ = ((SpinnerNumberModel) boxCenterZWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxRotZWidget)
             {
-                this.boxRotZ = (int) evt.getNewValue();
+                this.boxRotZ = ((SpinnerNumberModel) boxRotZWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxRotYWidget)
             {
-                this.boxRotY = (int) evt.getNewValue();
+                this.boxRotY = ((SpinnerNumberModel) boxRotYWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxRotXWidget)
             {
-                this.boxRotX = (int) evt.getNewValue();
+                this.boxRotX = ((SpinnerNumberModel) boxRotXWidget.getModel()).getNumber().doubleValue();
             }
             else
             {
+                System.err.println("CropOrientedBox3DPlugin: unknown widget updated...");
                 return;
             }
             

@@ -15,7 +15,11 @@ import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -27,7 +31,6 @@ import ij.process.FloatPolygon;
 import ij.process.ImageProcessor;
 import net.ijt.geom2d.Point2D;
 import net.ijt.rotcrop.RotCrop;
-import net.ijt.rotcrop.plugins.ChooseNumberWidget.ValueChangeEvent;
 
 /**
  * Plugin for generating a rotated crop from an image, by estimating the crop
@@ -78,7 +81,7 @@ public class TangentCropPlugin implements PlugIn
         return new Point2D(poly.xpoints[0], poly.ypoints[0]);
     }
 
-    public class Frame extends JFrame implements ActionListener, ChooseNumberWidget.Listener
+    public class Frame extends JFrame implements ActionListener, ChangeListener
     {
         // ====================================================
         // Static fields
@@ -105,11 +108,11 @@ public class TangentCropPlugin implements PlugIn
         // ====================================================
         // GUI Widgets
         
-        ChooseNumberWidget sizeXWidget;
-        ChooseNumberWidget sizeYWidget;
-        ChooseNumberWidget boxCenterXWidget;
-        ChooseNumberWidget boxCenterYWidget;
-        ChooseNumberWidget gradientRangeWidget;
+        JSpinner sizeXWidget;
+        JSpinner sizeYWidget;
+        JSpinner boxCenterXWidget;
+        JSpinner boxCenterYWidget;
+        JSpinner gradientRangeWidget;
 
         JCheckBox autoUpdateCheckBox;
         JButton runButton;
@@ -147,20 +150,20 @@ public class TangentCropPlugin implements PlugIn
             runButton = new JButton("Run!");
             runButton.addActionListener(this);
             
-            sizeXWidget = new ChooseNumberWidget(boxSizeX, 0);
-            sizeXWidget.addListener(this);
+            sizeXWidget = new JSpinner(new SpinnerNumberModel(boxSizeX, 0, 10000, 1));
+            sizeXWidget.addChangeListener(this);
             
-            sizeYWidget = new ChooseNumberWidget(boxSizeY, 0);
-            sizeYWidget.addListener(this);
+            sizeYWidget = new JSpinner(new SpinnerNumberModel(boxSizeY, 0, 10000, 1));
+            sizeYWidget.addChangeListener(this);
             
-            boxCenterXWidget = new ChooseNumberWidget(boxCenterX);
-            boxCenterXWidget.addListener(this);
+            boxCenterXWidget = new JSpinner(new SpinnerNumberModel(boxCenterX, 0, 10000, 1));
+            boxCenterXWidget.addChangeListener(this);
             
-            boxCenterYWidget = new ChooseNumberWidget(boxCenterY);
-            boxCenterYWidget.addListener(this);
+            boxCenterYWidget = new JSpinner(new SpinnerNumberModel(boxCenterY, 0, 10000, 1));
+            boxCenterYWidget.addChangeListener(this);
             
-            gradientRangeWidget = new ChooseNumberWidget(gradientRange);
-            gradientRangeWidget.addListener(this);
+            gradientRangeWidget = new JSpinner(new SpinnerNumberModel(gradientRange, 0, 1000, 1));
+            gradientRangeWidget.addChangeListener(this);
             
             autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
         }
@@ -175,19 +178,19 @@ public class TangentCropPlugin implements PlugIn
             JPanel sizePanel = GuiHelper.createOptionsPanel("Result Size");
             sizePanel.setLayout(new GridLayout(2, 2));
             sizePanel.add(new JLabel("Size X:"));
-            sizePanel.add(sizeXWidget.getPanel());
+            sizePanel.add(sizeXWidget);
             sizePanel.add(new JLabel("Size Y:"));
-            sizePanel.add(sizeYWidget.getPanel());
+            sizePanel.add(sizeYWidget);
             mainPanel.add(sizePanel);
             
             JPanel boxPanel = GuiHelper.createOptionsPanel("Rotated Box");
             boxPanel.setLayout(new GridLayout(3, 2));
             boxPanel.add(new JLabel("Center X:"));
-            boxPanel.add(boxCenterXWidget.getPanel());
+            boxPanel.add(boxCenterXWidget);
             boxPanel.add(new JLabel("Center Y:"));
-            boxPanel.add(boxCenterYWidget.getPanel());
+            boxPanel.add(boxCenterYWidget);
             boxPanel.add(new JLabel("Gradient Range (pixels):"));
-            boxPanel.add(gradientRangeWidget.getPanel());
+            boxPanel.add(gradientRangeWidget);
             mainPanel.add(boxPanel);
             
             // also add buttons
@@ -226,30 +229,31 @@ public class TangentCropPlugin implements PlugIn
         }
 
         @Override
-        public void valueChanged(ValueChangeEvent evt)
+        public void stateChanged(ChangeEvent evt)
         {
             if (evt.getSource() == sizeXWidget)
             {
-                this.boxSizeX = (int) evt.getNewValue();
+                this.boxSizeX = ((SpinnerNumberModel) sizeXWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == sizeYWidget)
             {
-                this.boxSizeY = (int) evt.getNewValue();
+                this.boxSizeY = ((SpinnerNumberModel) sizeYWidget.getModel()).getNumber().intValue();
             }
             else if (evt.getSource() == boxCenterXWidget)
             {
-                this.boxCenterX = (int) evt.getNewValue();
+                this.boxCenterX = ((SpinnerNumberModel) boxCenterXWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == boxCenterYWidget)
             {
-                this.boxCenterY = (int) evt.getNewValue();
+                this.boxCenterY = ((SpinnerNumberModel) boxCenterYWidget.getModel()).getNumber().doubleValue();
             }
             else if (evt.getSource() == gradientRangeWidget)
             {
-                this.gradientRange = evt.getNewValue();
+                this.gradientRange = ((SpinnerNumberModel) gradientRangeWidget.getModel()).getNumber().doubleValue();
             }
             else
             {
+                System.err.println("TangentCropPlugin: unknown widget updated...");
                 return;
             }
             
