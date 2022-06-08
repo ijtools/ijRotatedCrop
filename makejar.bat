@@ -1,0 +1,1 @@
+jar cvf Rotated_Crop.jar -C target/classes/ .
