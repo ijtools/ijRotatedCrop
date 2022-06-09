@@ -3,7 +3,6 @@
  */
 package net.ijt.rotcrop;
 
-import ij.IJ;
 import ij.ImageStack;
 import ij.process.ByteProcessor;
 import ij.process.ImageProcessor;
@@ -45,26 +44,13 @@ public class RotCrop
 
         // allocate result image
         ImageProcessor res = new ByteProcessor(sizeX, sizeY);
-
-        // iterate over pixel of target image
-        for (int y = 0; y < sizeY; y++)
-        {
-            for (int x = 0; x < sizeX; x++)
-            {
-                res.setf(x, y, (float) interp.evaluate(x, y));
-            }
-        }
+        fillImage(res, interp);
 
         return res;
     }
     
     public static final ImageStack rotatedCrop(ImageStack image, int[] dims, Point3D refPoint, double[] anglesInDegrees)
     {
-        // retrieve image dimensions
-        int sizeX = dims[0];
-        int sizeY = dims[1];
-        int sizeZ = dims[2];
-
         // Computes the transform that will map indices from within result image
         // into coordinates within source image
         AffineTransform3D transfo = computeTransform(refPoint, dims, anglesInDegrees);
@@ -74,60 +60,33 @@ public class RotCrop
         Function3D interp = new TransformedImage3D(image, transfo);
 
         // allocate result image
-        ImageStack res = ImageStack.create(sizeX, sizeY, sizeZ, 8);
-
-        // iterate over pixel of target image
-        for (int z = 0; z < sizeZ; z++)
-        {
-            for (int y = 0; y < sizeY; y++)
-            {
-                for (int x = 0; x < sizeX; x++)
-                {
-                    res.setVoxel(x, y, z, interp.evaluate(x, y, z));
-                }
-            }
-        }
+        ImageStack res = ImageStack.create(dims[0], dims[1], dims[2], 8);
+        fillStack(res, interp);
+        
         return res;
     }
     
     public static final ImageProcessor tangentCrop(ImageProcessor image, Point2D refPoint, int[] dims, double gradientSigma)
     {
-        // retrieve image dimensions
-        int sizeX = dims[0];
-        int sizeY = dims[1];
-        
+        // evaluate gradient angle around reference point
         LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
         Vector2D grad = gradEst.evaluate(image, refPoint);
         double angle = Math.atan2(grad.getY(), grad.getX()) - Math.PI/2;
-
-        // create elementary transforms
-        AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-sizeX / 2, -sizeY / 2);
-        AffineTransform2D rot = AffineTransform2D.createRotation(angle);
-        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
-
-        // concatenate into global display-image-to-source-image transform
-        AffineTransform2D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
-
+        
+        AffineTransform2D transfo = computeTransform(refPoint, dims, angle);
+        
         // Create interpolation class, that encapsulates both the image and the
         // transform
         Function2D interp = new TransformedImage2D(image, transfo);
 
         // allocate result image
-        ImageProcessor res = new ByteProcessor(sizeX, sizeY);
-
-        // iterate over pixel of target image
-        for (int y = 0; y < sizeY; y++)
-        {
-            for (int x = 0; x < sizeX; x++)
-            {
-                res.setf(x, y, (float) interp.evaluate(x, y));
-            }
-        }
+        ImageProcessor res = new ByteProcessor(dims[0], dims[1]);
+        fillImage(res, interp);
 
         return res;
     }
     
-    public static final AffineTransform2D computeTransform(int[] boxSize, Point2D refPoint, double boxAngle)
+    public static final AffineTransform2D computeTransform(Point2D refPoint, int[] boxSize, double boxAngle)
     {
         // create elementary transforms
         AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-boxSize[0] * 0.5, -boxSize[1] * 0.5);
@@ -135,8 +94,7 @@ public class RotCrop
         AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
 
         // concatenate into global display-image-to-source-image transform
-        AffineTransform2D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
-        return transfo;
+        return trRefPoint.concatenate(rot).concatenate(trBoxCenter);
     }
     
     public static final AffineTransform3D computeTransform(Point3D boxCenter, int[] boxSize, double[] anglesInDegrees)
@@ -151,66 +109,13 @@ public class RotCrop
         // put origin (= box center) on the reference point
         AffineTransform3D transfo = rotateAndShift(anglesInDegrees, boxCenter).concatenate(trBoxCenter);
         
-//        System.out.println("transfo: " + transfo);
         return transfo;
     }
     
 
     public static final ImageStack tangentCrop(ImageStack image, Point3D refPoint, int[] dims, double gradientSigma)
     {
-        // retrieve box dimensions
-        int sizeX = dims[0];
-        int sizeY = dims[1];
-        int sizeZ = dims[2];
-        
-//        // evaluate gradient around chosen point
-//        LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
-//        Vector3D grad = gradEst.evaluate(image, refPoint).normalize();
-//        IJ.log("  Gradient: " + grad);
-//        
-//        // find the basis vector the less orthogonal to the gradient
-//        Vector3D[] basisVectors = new Vector3D[] {new Vector3D(1, 0, 0), new Vector3D(0, 1, 0), new Vector3D(0, 0, 1)};
-//        Vector3D[] crossProds = new Vector3D[3];
-//        double maxVal = 0.0;
-//        int indMax = 1;
-//        for (int i = 0; i < 3; i++)
-//        {
-//            crossProds[i] = Vector3D.crossProduct(grad, basisVectors[i]);
-//            double norm = crossProds[i].norm(); 
-//            if (norm > maxVal)
-//            {
-//                maxVal = norm;
-//                indMax = i;
-//            }
-//        }
-//        
-//        // identify two vectors orthogonal to the outwards normal
-//        Vector3D vt1 = crossProds[indMax];
-//        Vector3D vt2 = Vector3D.crossProduct(grad, vt1);
-//        IJ.log("  vt1: " + vt1);
-//        IJ.log("  vt2: " + vt2);
-//        
-//        // convert eigen vectors to rotation matrix
-//        // (concatenate column vectors corresponding to eigen vectors, and transpose)
-//        double m00 = vt1.getX();
-//        double m01 = vt1.getY();
-//        double m02 = vt1.getZ();
-//        double m10 = vt2.getX();
-//        double m11 = vt2.getY();
-//        double m12 = vt2.getZ();
-//        double m20 = grad.getX();
-//        double m21 = grad.getY();
-//        double m22 = grad.getZ();
-//        AffineTransform3D rot = new DefaultAffineTransform3D(m00, m10, m20, 0,  m01, m11, m21, 0,  m02, m12, m22, 0);
-//         
-//        // create elementary transforms
-//        AffineTransform3D trBoxCenter = AffineTransform3D.createTranslation(-(sizeX - 1) * 0.5, -(sizeY - 1) * 0.5, -(sizeZ - 1) * 0.5);
-//        AffineTransform3D trRefPoint = AffineTransform3D.createTranslation(refPoint);
-//
-//        // concatenate into global display-image-to-source-image transform
-//        // create the transform matrix that maps from box coords to global coords
-//        AffineTransform3D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
-
+        // Compute box to image transform, based on local gradient
         AffineTransform3D transfo = computeTangentCropTransform(image, refPoint, dims, gradientSigma);
         
         // Create interpolation class, that encapsulates both the image and the
@@ -218,21 +123,9 @@ public class RotCrop
         Function3D interp = new TransformedImage3D(image, transfo);
 
         // allocate result image
-        ImageStack res = ImageStack.create(sizeX, sizeY, sizeZ, 8);
+        ImageStack res = ImageStack.create(dims[0], dims[1], dims[2], 8);
         
         fillStack(res, interp);
-//
-//        // iterate over voxel of target image
-//        for (int z = 0; z < sizeZ; z++)
-//        {
-//            for (int y = 0; y < sizeY; y++)
-//            {
-//                for (int x = 0; x < sizeX; x++)
-//                {
-//                    res.setVoxel(x, y, z, interp.evaluate(x, y, z));
-//                }
-//            }
-//        }
         
         return res;
     }
@@ -247,7 +140,6 @@ public class RotCrop
         // evaluate gradient around chosen point
         LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
         Vector3D grad = gradEst.evaluate(image, refPoint).normalize();
-        IJ.log("  Gradient: " + grad);
         
         // find the basis vector the less orthogonal to the gradient
         Vector3D[] basisVectors = new Vector3D[] {new Vector3D(1, 0, 0), new Vector3D(0, 1, 0), new Vector3D(0, 0, 1)};
@@ -268,8 +160,6 @@ public class RotCrop
         // identify two vectors orthogonal to the outwards normal
         Vector3D vt1 = crossProds[indMax];
         Vector3D vt2 = Vector3D.crossProduct(grad, vt1);
-        IJ.log("  vt1: " + vt1);
-        IJ.log("  vt2: " + vt2);
         
         // convert eigen vectors to rotation matrix
         // (concatenate column vectors corresponding to eigen vectors, and transpose)
@@ -293,6 +183,31 @@ public class RotCrop
         AffineTransform3D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
         
         return transfo;
+    }
+    
+    /**
+     * Fills the pixels of the specified image according to the values obtained
+     * from the Function2D instance.
+     * 
+     * @param image
+     *            the stack to fill
+     * @param fun
+     *            the function used to populate stack values
+     */
+    public static final void fillImage(ImageProcessor image, Function2D fun)
+    {
+        // retrieve stack size
+        int sizeX = image.getWidth();
+        int sizeY = image.getHeight();
+        
+        // iterate over image pixels
+        for (int y = 0; y < sizeY; y++)
+        {
+            for (int x = 0; x < sizeX; x++)
+            {
+                image.setf(x, y, (float) fun.evaluate(x, y));
+            }
+        }
     }
     
     /**
