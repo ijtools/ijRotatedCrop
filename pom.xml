@@ -21,6 +21,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <name>plugins/Rotated_Crop.jar</name>
     <description>ImageJ/Fiji plugin to generate rotated crop images from 2D/3D images</description>
 
+    <properties>
+        <maven.compiler.source>1.15</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+  
     <dependencies>
         <!-- When writing ImageJ/Fiji plugins, it is necessary to add a dependency 
              to ImageJ jar -->
