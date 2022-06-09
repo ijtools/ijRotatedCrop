@@ -8,10 +8,6 @@ import java.awt.Canvas;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.Point;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
@@ -24,8 +20,6 @@ import javax.swing.JPanel;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 
 import ij.IJ;
 import ij.ImagePlus;
@@ -81,7 +75,7 @@ public class TangentCrop3DPlugin implements PlugIn
         canvas.addMouseListener(frame);
     }
 
-    public class Frame extends JFrame implements ActionListener, ChangeListener, ItemListener, MouseListener
+    public class Frame extends JFrame implements MouseListener
     {
         // ====================================================
         // Static fields
@@ -155,34 +149,62 @@ public class TangentCrop3DPlugin implements PlugIn
         private void setupWidgets()
         {
             sizeXWidget = new JSpinner(new SpinnerNumberModel(boxSizeX, 0, 10000, 1));
-            sizeXWidget.addChangeListener(this);
+            sizeXWidget.addChangeListener(evt -> 
+            {
+                this.boxSizeX = ((SpinnerNumberModel) sizeXWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             sizeYWidget = new JSpinner(new SpinnerNumberModel(boxSizeY, 0, 10000, 1));
-            sizeYWidget.addChangeListener(this);
+            sizeYWidget.addChangeListener(evt -> 
+            {
+                this.boxSizeY = ((SpinnerNumberModel) sizeYWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             sizeZWidget = new JSpinner(new SpinnerNumberModel(boxSizeZ, 0, 10000, 1));
-            sizeZWidget.addChangeListener(this);
+            sizeZWidget.addChangeListener(evt -> 
+            {
+                this.boxSizeZ = ((SpinnerNumberModel) sizeZWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             boxCenterXWidget = new JSpinner(new SpinnerNumberModel(boxCenterX, 0, 10000, 1));
-            boxCenterXWidget.addChangeListener(this);
+            boxCenterXWidget.addChangeListener(evt -> 
+            {
+                this.boxCenterX = ((SpinnerNumberModel) boxCenterXWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             boxCenterYWidget = new JSpinner(new SpinnerNumberModel(boxCenterY, 0, 10000, 1));
-            boxCenterYWidget.addChangeListener(this);
+            boxCenterYWidget.addChangeListener(evt -> 
+            {
+                this.boxCenterY = ((SpinnerNumberModel) boxCenterYWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             boxCenterZWidget = new JSpinner(new SpinnerNumberModel(boxCenterZ, 0, 10000, 1));
-            boxCenterZWidget.addChangeListener(this);
+            boxCenterZWidget.addChangeListener(evt -> 
+            {
+                this.boxCenterZ = ((SpinnerNumberModel) boxCenterZWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             gradientRangeWidget = new JSpinner(new SpinnerNumberModel(gradientRange, 0, 10000, 1));
-            gradientRangeWidget.addChangeListener(this);
+            gradientRangeWidget.addChangeListener(evt -> 
+            {
+                this.gradientRange = ((SpinnerNumberModel) gradientRangeWidget.getModel()).getNumber().intValue();
+                updatePreviewIfNeeded();
+            });
             
             autoPreviewCheckBox = new JCheckBox("Auto-Update", false);
-            autoPreviewCheckBox.addItemListener(this);
+            autoPreviewCheckBox.addItemListener(evt -> updatePreviewIfNeeded());
             
             previewButton = new JButton("Preview");
-            previewButton.addActionListener(this);
+            previewButton.addActionListener(evt -> updatePreview());
             
             runButton = new JButton("Create Result Image");
-            runButton.addActionListener(this);
+            runButton.addActionListener(evt -> displayResult());
         }
 
         private void setupLayout()
@@ -275,83 +297,12 @@ public class TangentCrop3DPlugin implements PlugIn
             resultFrame.setVisible(true);
         }
 
-        @Override
-        public void actionPerformed(ActionEvent evt)
+        private void updatePreviewIfNeeded()
         {
-            if (evt.getSource() == previewButton)
-            {
-                updatePreview();
-            }
-            else if (evt.getSource() == runButton)
-            {
-                displayResult();
-            }
-            else
-            {
-                System.err.println("TangentCrop3DPlugin: unknown widget updated...");
-                return;
-            }
-        }
-
-        @Override
-        public void stateChanged(ChangeEvent evt)
-        {
-            if (evt.getSource() == sizeXWidget)
-            {
-                this.boxSizeX = ((SpinnerNumberModel) sizeXWidget.getModel()).getNumber().intValue();
-            }
-            else if (evt.getSource() == sizeYWidget)
-            {
-                this.boxSizeY = ((SpinnerNumberModel) sizeYWidget.getModel()).getNumber().intValue();
-            }
-            else if (evt.getSource() == sizeZWidget)
-            {
-                this.boxSizeZ = ((SpinnerNumberModel) sizeZWidget.getModel()).getNumber().intValue();
-            }
-            else if (evt.getSource() == boxCenterXWidget)
-            {
-                this.boxCenterX = ((SpinnerNumberModel) boxCenterXWidget.getModel()).getNumber().doubleValue();
-            }
-            else if (evt.getSource() == boxCenterYWidget)
-            {
-                this.boxCenterY = ((SpinnerNumberModel) boxCenterYWidget.getModel()).getNumber().doubleValue();
-            }
-            else if (evt.getSource() == boxCenterZWidget)
-            {
-                this.boxCenterZ = ((SpinnerNumberModel) boxCenterZWidget.getModel()).getNumber().doubleValue();
-            }
-            else if (evt.getSource() == gradientRangeWidget)
-            {
-                this.gradientRange = ((SpinnerNumberModel) gradientRangeWidget.getModel()).getNumber().doubleValue();
-            }
-            else
-            {
-                System.err.println("TangentCrop3DPlugin: unknown widget updated...");
-                return;
-            }
-            
             if (this.autoPreviewCheckBox.isSelected())
             {
                 updatePreview();
             }
-        }
-        
-        @Override
-        public void itemStateChanged(ItemEvent evt)
-        {
-            if (evt.getSource() == autoPreviewCheckBox)
-            {
-                if (this.autoPreviewCheckBox.isSelected())
-                {
-                    updatePreview();
-                }
-            }
-            else
-            {
-                System.err.println("CropOrientedBoxPlugin: unknown widget updated...");
-                return;
-            }
-            
         }
 
         @Override
