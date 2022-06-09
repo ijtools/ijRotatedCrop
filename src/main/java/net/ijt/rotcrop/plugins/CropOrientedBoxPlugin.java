@@ -4,10 +4,16 @@
 package net.ijt.rotcrop.plugins;
 
 import java.awt.BorderLayout;
+import java.awt.Canvas;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -63,6 +69,10 @@ public class CropOrientedBoxPlugin implements PlugIn
         
         Frame frame = new Frame(imagePlus, refPoint);
         frame.setVisible(true);
+        
+        // add mouse listener to the input image window to track box positioning
+        Canvas canvas = imagePlus.getWindow().getCanvas();
+        canvas.addMouseListener(frame);
     }
     
     /**
@@ -80,7 +90,7 @@ public class CropOrientedBoxPlugin implements PlugIn
         return new Point2D(poly.xpoints[0], poly.ypoints[0]);
     }
 
-    public class Frame extends JFrame implements ActionListener, ChangeListener
+    public class Frame extends JFrame implements ActionListener, ChangeListener, ItemListener, MouseListener
     {
         // ====================================================
         // Static fields
@@ -163,6 +173,7 @@ public class CropOrientedBoxPlugin implements PlugIn
             boxAngleWidget.addChangeListener(this);
             
             autoUpdateCheckBox = new JCheckBox("Auto-Update", false);
+            autoUpdateCheckBox.addItemListener(this);
         }
 
         private void setupLayout()
@@ -202,7 +213,7 @@ public class CropOrientedBoxPlugin implements PlugIn
         {
             int[] dims = new int[] {boxSizeX, boxSizeY};
             Point2D cropCenter = new Point2D(boxCenterX, boxCenterY);
-
+            
             ImageProcessor res = RotCrop.rotatedCrop(imagePlus.getProcessor(), dims, cropCenter, boxAngle);
             ImagePlus resultPlus = new ImagePlus("Result", res);
             
@@ -258,6 +269,59 @@ public class CropOrientedBoxPlugin implements PlugIn
             {
                 updateCrop();
             }
+        }
+        
+        @Override
+        public void itemStateChanged(ItemEvent evt)
+        {
+            if (evt.getSource() == autoUpdateCheckBox)
+            {
+                if (this.autoUpdateCheckBox.isSelected())
+                {
+                    updateCrop();
+                }
+            }
+            else
+            {
+                System.err.println("CropOrientedBoxPlugin: unknown widget updated...");
+                return;
+            }
+            
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e)
+        {
+            Point mousePosition = imagePlus.getWindow().getCanvas().getCursorLoc();
+            this.boxCenterX = mousePosition.x;
+            ((SpinnerNumberModel) this.boxCenterXWidget.getModel()).setValue(this.boxCenterX);
+            this.boxCenterY = mousePosition.y;
+            ((SpinnerNumberModel) this.boxCenterYWidget.getModel()).setValue(this.boxCenterY);
+            
+            if (this.autoUpdateCheckBox.isSelected())
+            {
+                updateCrop();
+            }
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e)
+        {
         }
     }
 }

@@ -4,10 +4,16 @@
 package net.ijt.rotcrop.plugins;
 
 import java.awt.BorderLayout;
+import java.awt.Canvas;
 import java.awt.FlowLayout;
 import java.awt.GridLayout;
+import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
@@ -69,9 +75,13 @@ public class TangentCrop3DPlugin implements PlugIn
         
         Frame frame = new Frame(imagePlus, refPoint);
         frame.setVisible(true);
+        
+        // add mouse listener to the input image window to track box positioning
+        Canvas canvas = imagePlus.getWindow().getCanvas();
+        canvas.addMouseListener(frame);
     }
 
-    public class Frame extends JFrame implements ActionListener, ChangeListener
+    public class Frame extends JFrame implements ActionListener, ChangeListener, ItemListener, MouseListener
     {
         // ====================================================
         // Static fields
@@ -166,12 +176,13 @@ public class TangentCrop3DPlugin implements PlugIn
             gradientRangeWidget.addChangeListener(this);
             
             autoPreviewCheckBox = new JCheckBox("Auto-Update", false);
+            autoPreviewCheckBox.addItemListener(this);
+            
             previewButton = new JButton("Preview");
             previewButton.addActionListener(this);
             
             runButton = new JButton("Create Result Image");
             runButton.addActionListener(this);
-            
         }
 
         private void setupLayout()
@@ -323,6 +334,61 @@ public class TangentCrop3DPlugin implements PlugIn
             {
                 updatePreview();
             }
+        }
+        
+        @Override
+        public void itemStateChanged(ItemEvent evt)
+        {
+            if (evt.getSource() == autoPreviewCheckBox)
+            {
+                if (this.autoPreviewCheckBox.isSelected())
+                {
+                    updatePreview();
+                }
+            }
+            else
+            {
+                System.err.println("CropOrientedBoxPlugin: unknown widget updated...");
+                return;
+            }
+            
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mousePressed(MouseEvent e)
+        {
+            Point mousePosition = imagePlus.getWindow().getCanvas().getCursorLoc();
+            this.boxCenterX = mousePosition.x;
+            ((SpinnerNumberModel) this.boxCenterXWidget.getModel()).setValue(this.boxCenterX);
+            this.boxCenterY = mousePosition.y;
+            ((SpinnerNumberModel) this.boxCenterYWidget.getModel()).setValue(this.boxCenterY);
+            this.boxCenterZ = imagePlus.getCurrentSlice() - 1;
+            ((SpinnerNumberModel) this.boxCenterZWidget.getModel()).setValue(this.boxCenterZ);
+            
+            if (this.autoPreviewCheckBox.isSelected())
+            {
+                updatePreview();
+            }
+        }
+
+        @Override
+        public void mouseReleased(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mouseEntered(MouseEvent e)
+        {
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e)
+        {
         }
     }
 }
