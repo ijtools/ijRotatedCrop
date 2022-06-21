@@ -25,9 +25,14 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import ij.gui.GUI;
+import ij.gui.ImageWindow;
 import ij.gui.StackWindow;
 import ij.plugin.PlugIn;
+import ij.process.ImageProcessor;
+import net.ijt.geom3d.AffineTransform3D;
 import net.ijt.geom3d.Point3D;
+import net.ijt.interp.Function3D;
+import net.ijt.interp.TransformedImage3D;
 import net.ijt.rotcrop.RotCrop;
 
 /**
@@ -90,9 +95,9 @@ public class CropOrientedBox3DPlugin implements PlugIn
         double boxCenterX;
         double boxCenterY;
         double boxCenterZ;
-        double boxRotZ;
-        double boxRotY;
         double boxRotX;
+        double boxRotY;
+        double boxRotZ;
         // TODO: create a "Box"/"OrientedBox" inner class?
 
 
@@ -110,10 +115,11 @@ public class CropOrientedBox3DPlugin implements PlugIn
         JSpinner boxRotXWidget;
 
         JCheckBox autoPreviewCheckBox;
+        JButton previewButton;
         JButton runButton;
         
         /** The frame used to display the result of rotated crop. */
-        StackWindow resultFrame = null;
+        ImageWindow previewFrame = null;
         
 
         // ====================================================
@@ -125,9 +131,9 @@ public class CropOrientedBox3DPlugin implements PlugIn
             this.imagePlus = imagePlus;
             
             // init default values
-            boxSizeX = 50;
-            boxSizeY = 50;
-            boxSizeZ = 50;
+            boxSizeX = 100;
+            boxSizeY = 100;
+            boxSizeZ = 100;
             boxCenterX = refPoint.getX();
             boxCenterY = refPoint.getY();
             boxCenterZ = refPoint.getZ();
@@ -200,14 +206,14 @@ public class CropOrientedBox3DPlugin implements PlugIn
             });
             
             boxRotYWidget = new JSpinner(new SpinnerNumberModel(boxRotY, -180, 180, 1));
-            boxCenterZWidget.addChangeListener(evt -> 
+            boxRotYWidget.addChangeListener(evt -> 
             {
                 this.boxRotY = ((SpinnerNumberModel) boxRotYWidget.getModel()).getNumber().doubleValue();
                 updatePreviewIfNeeded();
             });
             
             boxRotZWidget = new JSpinner(new SpinnerNumberModel(boxRotZ, -180, 180, 1));
-            boxCenterZWidget.addChangeListener(evt -> 
+            boxRotZWidget.addChangeListener(evt -> 
             {
                 this.boxRotZ = ((SpinnerNumberModel) boxRotZWidget.getModel()).getNumber().doubleValue();
                 updatePreviewIfNeeded();
@@ -215,6 +221,12 @@ public class CropOrientedBox3DPlugin implements PlugIn
             
             autoPreviewCheckBox = new JCheckBox("Auto-Update", false);
             autoPreviewCheckBox.addItemListener(evt -> updatePreviewIfNeeded());
+
+            previewButton = new JButton("Preview");
+            previewButton.addActionListener(evt -> updatePreview());
+            
+            runButton = new JButton("Create Result Image");
+            runButton.addActionListener(evt -> displayResult());
         }
 
         private void setupLayout()
@@ -255,7 +267,8 @@ public class CropOrientedBox3DPlugin implements PlugIn
             mainPanel.add(rotationPanel);
             
             // also add buttons
-            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, autoPreviewCheckBox, runButton);
+            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, autoPreviewCheckBox, previewButton);
+            GuiHelper.addInLine(mainPanel, FlowLayout.CENTER, runButton);
             
             // put main panel in the middle of frame
             this.setLayout(new BorderLayout());
@@ -264,29 +277,52 @@ public class CropOrientedBox3DPlugin implements PlugIn
         
         public void updatePreview()
         {
+            // retrieve data
+            ImageStack stack = imagePlus.getStack();
             int[] dims = new int[] {boxSizeX, boxSizeY, boxSizeZ};
             Point3D cropCenter = new Point3D(boxCenterX, boxCenterY, boxCenterZ);
             double[] angles = new double[] {boxRotX, boxRotY, boxRotZ};
 
+            // compute the transform
+            AffineTransform3D transfo = RotCrop.computeTransform(cropCenter, dims, angles);
+
+            // Create interpolation class, that encapsulates both the image and the
+            // transform
+            Function3D interp = new TransformedImage3D(stack, transfo);
+
+            ImageProcessor preview = RotCrop.orthoSlices(interp, dims);
+            ImagePlus previewPlus = new ImagePlus("Rotated Crop Preview", preview);
+
+            // retrieve frame for displaying result
+            if (this.previewFrame == null)
+            {
+                this.previewFrame = new ImageWindow(previewPlus);
+            }
+            // update display frame, keeping the previous magnification
+            double mag = this.previewFrame.getCanvas().getMagnification();
+            this.previewFrame.setImage(previewPlus);
+            this.previewFrame.getCanvas().setMagnification(mag);
+            this.previewFrame.setVisible(true);
+        }
+
+        public void displayResult()
+        {
+            int[] dims = new int[] {boxSizeX, boxSizeY, boxSizeZ};
+            Point3D cropCenter = new Point3D(boxCenterX, boxCenterY, boxCenterZ);
+            double[] angles = new double[] {boxRotX, boxRotY, boxRotZ};
+
+            IJ.log("Rot Crop With params: ");
+            IJ.log(String.format("  box size: %d x %d x %d", boxSizeX, boxSizeY, boxSizeZ));
+            IJ.log(String.format("  refPoint: " + cropCenter));
+            IJ.log(String.format("  Euler Angles: %5.2f, %5.2f, %5.2f", boxRotX, boxRotY, boxRotZ));
+            
+            // compute the crop
             ImageStack res = RotCrop.rotatedCrop(imagePlus.getStack(), dims, cropCenter, angles);
             ImagePlus resultPlus = new ImagePlus("Result", res);
             
-            // retrieve frame for displaying result
-            if (this.resultFrame == null)
-            {
-                this.resultFrame = new StackWindow(resultPlus);
-                this.resultFrame.setVisible(true);
-            }
-            
-            // keep current slice
-            int slice = this.resultFrame.getImagePlus().getSlice();
-            IJ.log("slice: " + slice);
-            
-            // update display frame, keeping the previous magnification
-            this.resultFrame.setImage(resultPlus);
-
-            // restore previous display settings
-            IJ.log("slice again2: " + this.resultFrame.getImagePlus().getSlice());
+            // display in a new frame
+            ImageWindow resultFrame = new StackWindow(resultPlus);
+            resultFrame.setVisible(true);
         }
 
         private void updatePreviewIfNeeded()
