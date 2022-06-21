@@ -246,7 +246,7 @@ public class RotCrop
      * 
      * @param anglesInDegrees
      *            the three Euler angles (in degrees) that define the box
-     *            orientation.
+     *            orientation ("XYZ" convention)
      * @param boxCenter
      *            the center of the box
      * @return an affine transform that can be used to compute coordinates of
@@ -254,9 +254,9 @@ public class RotCrop
      */
     public static final AffineTransform3D rotateAndShift(double[] anglesInDegrees, Point3D refPoint)
     {
-        AffineTransform3D rotZ = AffineTransform3D.createRotationOz(Math.toRadians(anglesInDegrees[0]));
+        AffineTransform3D rotX = AffineTransform3D.createRotationOx(Math.toRadians(anglesInDegrees[0]));
         AffineTransform3D rotY = AffineTransform3D.createRotationOy(Math.toRadians(anglesInDegrees[1]));
-        AffineTransform3D rotX = AffineTransform3D.createRotationOx(Math.toRadians(anglesInDegrees[2]));
+        AffineTransform3D rotZ = AffineTransform3D.createRotationOz(Math.toRadians(anglesInDegrees[2]));
         AffineTransform3D trans = AffineTransform3D.createTranslation(refPoint);
         
         // concatenate into global display-image-to-source-image transform
