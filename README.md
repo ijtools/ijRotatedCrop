@@ -1,22 +1,18 @@
-# imagej-plugin-template
-Simple project template for creating ImageJ Plugins.
+# Rotated Crop Plugin 
+Crop 2D/3D images with various bosx orientations.
 
-The aim is to provide a quick way to start a plugin for ImageJ, using the "legacy" plugin style. 
+The RotCrop Plugins for ImageJ allow to perform rotated crop of 2D/3D images.
+In fully manual versions, the crop can be defined based on crop dimensions, crop center, 
+and rotation angle(s) of the crop frame (in 3D, three angles are necessary).
 
-The project is based on maven. It uses sci-java as parent configuration. The parent configuration 
-is somewhat old (1.126), but I encountered configuration troubles with more recent ones. 
+Additional plugins provides an estimate of the rotation based on the gradient vector
+computed around the crop frame center. The gradient direction is used as vertical direction 
+in the result, making it easier to generate 2D/3D images that are tangent to a surface such as
+the epidermis of an organ or organism.
 
-The base configuration has few dependencies:
-
-* ImageJ
-* JUnit
 
 ## Installation
 
-Simply clone the project into the directory of your choice. 
-Then you can edit the pom.xml with informations specific to the project. 
-In particular, the name of the project is used by the Eclipse IDE to index
-the project.
+Simply copy the jar file into the "plugins" directory of your ImageJ/Fiji installation.
 
-A sample plugin file is provided in `src/main/java/net.ijt/DemoPlugin.java` file.
-The plugin configuration file is in `src/main/resources/plugins.config`.
+
