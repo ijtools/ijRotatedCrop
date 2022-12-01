@@ -16,7 +16,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <!-- ImageJ plugins require an underscore '_' in the name... --> 
     <groupId>net.ijtools</groupId>
     <artifactId>Rotated_Crop</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2-SNAPSHOT</version>
 
     <name>plugins/Rotated_Crop.jar</name>
     <description>ImageJ/Fiji plugin to generate rotated crop images from 2D/3D images</description>
