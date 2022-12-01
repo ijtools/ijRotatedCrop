@@ -4,7 +4,6 @@
 package net.ijt.rotcrop;
 
 import ij.IJ;
-import ij.ImageJ;
 import ij.ImagePlus;
 import ij.ImageStack;
 import net.ijt.geom3d.Point3D;
@@ -17,10 +16,6 @@ public class RotCrop_Demo_Ellipsoid
 {
     public static final void main(String... args)
     {
-//        // encapsulate into an ImagePlus for display
-//        ImageJ ij = IJ.getInstance();
-//        ij.setVisible(true);
-        
         // Load input image
         ImagePlus imagePlus = IJ.openImage(RotCrop_Demo_Ellipsoid.class.getResource("/images/ellipsoid_200x150x100.tif").getFile());
         ImageStack image = imagePlus.getStack();
