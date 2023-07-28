@@ -142,8 +142,8 @@ public class TangentCropPlugin implements PlugIn
             // init default values
             boxSizeX = 400;
             boxSizeY = 400;
-            boxCenterX = refPoint.getX();
-            boxCenterY = refPoint.getY();
+            boxCenterX = refPoint.x();
+            boxCenterY = refPoint.y();
             gradientRange = 3.0;
 
             setupWidgets();

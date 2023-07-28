@@ -10,7 +10,7 @@ import net.ijt.geom2d.AffineTransform2D;
 import net.ijt.geom2d.Point2D;
 import net.ijt.geom2d.Vector2D;
 import net.ijt.geom3d.AffineTransform3D;
-import net.ijt.geom3d.DefaultAffineTransform3D;
+import net.ijt.geom3d.MatrixAffineTransform3D;
 import net.ijt.geom3d.Point3D;
 import net.ijt.geom3d.Vector3D;
 import net.ijt.interp.Function2D;
@@ -33,7 +33,7 @@ public class RotCrop
         // create elementary transforms
         AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-sizeX / 2, -sizeY / 2);
         AffineTransform2D rot = AffineTransform2D.createRotation(Math.toRadians(angleInDegrees));
-        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
+        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.x(), refPoint.y());
 
         // concatenate into global display-image-to-source-image transform
         AffineTransform2D transfo = trRefPoint.concatenate(rot).concatenate(trBoxCenter);
@@ -71,7 +71,7 @@ public class RotCrop
         // evaluate gradient angle around reference point
         LocalGradientEstimator gradEst = new LocalGradientEstimator(gradientSigma);
         Vector2D grad = gradEst.evaluate(image, refPoint);
-        double angle = Math.atan2(grad.getY(), grad.getX()) - Math.PI/2;
+        double angle = Math.atan2(grad.y(), grad.x()) - Math.PI/2;
         
         AffineTransform2D transfo = computeTransform(refPoint, dims, angle);
         
@@ -91,7 +91,7 @@ public class RotCrop
         // create elementary transforms
         AffineTransform2D trBoxCenter = AffineTransform2D.createTranslation(-boxSize[0] * 0.5, -boxSize[1] * 0.5);
         AffineTransform2D rot = AffineTransform2D.createRotation(boxAngle);
-        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.getX(), refPoint.getY());
+        AffineTransform2D trRefPoint = AffineTransform2D.createTranslation(refPoint.x(), refPoint.y());
 
         // concatenate into global display-image-to-source-image transform
         return trRefPoint.concatenate(rot).concatenate(trBoxCenter);
@@ -163,16 +163,16 @@ public class RotCrop
         
         // convert eigen vectors to rotation matrix
         // (concatenate column vectors corresponding to eigen vectors, and transpose)
-        double m00 = vt1.getX();
-        double m01 = vt1.getY();
-        double m02 = vt1.getZ();
-        double m10 = vt2.getX();
-        double m11 = vt2.getY();
-        double m12 = vt2.getZ();
-        double m20 = grad.getX();
-        double m21 = grad.getY();
-        double m22 = grad.getZ();
-        AffineTransform3D rot = new DefaultAffineTransform3D(m00, m10, m20, 0,  m01, m11, m21, 0,  m02, m12, m22, 0);
+        double m00 = vt1.x();
+        double m01 = vt1.y();
+        double m02 = vt1.z();
+        double m10 = vt2.x();
+        double m11 = vt2.y();
+        double m12 = vt2.z();
+        double m20 = grad.x();
+        double m21 = grad.y();
+        double m22 = grad.z();
+        AffineTransform3D rot = new MatrixAffineTransform3D(m00, m10, m20, 0,  m01, m11, m21, 0,  m02, m12, m22, 0);
          
         // create elementary transforms
         AffineTransform3D trBoxCenter = AffineTransform3D.createTranslation(-(sizeX - 1) * 0.5, -(sizeY - 1) * 0.5, -(sizeZ - 1) * 0.5);

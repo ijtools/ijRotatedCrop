@@ -43,7 +43,7 @@ public class LocalGradientEstimatorTest
         LocalGradientEstimator gradEst = new LocalGradientEstimator(3.0);
         Vector2D grad = gradEst.evaluate(image, new Point2D(15.0, 5.0)).normalize();
         
-        System.out.println("grad: " + grad.getX() + ", " + grad.getY());
+        System.out.println("grad: " + grad.x() + ", " + grad.y());
     }
 
     /**

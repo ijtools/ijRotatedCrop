@@ -134,9 +134,9 @@ public class CropOrientedBox3DPlugin implements PlugIn
             boxSizeX = 100;
             boxSizeY = 100;
             boxSizeZ = 100;
-            boxCenterX = refPoint.getX();
-            boxCenterY = refPoint.getY();
-            boxCenterZ = refPoint.getZ();
+            boxCenterX = refPoint.x();
+            boxCenterY = refPoint.y();
+            boxCenterZ = refPoint.z();
             boxRotZ = 0.0;
             boxRotY = 0.0;
             boxRotX = 0.0;

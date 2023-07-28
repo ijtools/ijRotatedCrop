@@ -138,8 +138,8 @@ public class CropOrientedBoxPlugin implements PlugIn
             this.imagePlus = imagePlus;
             
             // init default values
-            boxCenterX = refPoint.getX();
-            boxCenterY = refPoint.getY();
+            boxCenterX = refPoint.x();
+            boxCenterY = refPoint.y();
             boxAngle = 0.0;
 
             setupWidgets();

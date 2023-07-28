@@ -55,7 +55,7 @@ public class RotCropTest
     private static final String formatCoords(Point3D p)
     {
         String pattern = "(%7.2f, %7.2f, %7.2f)";
-        return String.format(Locale.ENGLISH, pattern, p.getX(), p.getY(), p.getZ());
+        return String.format(Locale.ENGLISH, pattern, p.x(), p.y(), p.z());
         
     }
 

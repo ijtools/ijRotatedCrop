@@ -69,8 +69,8 @@ public class LocalGradientEstimator
         int r = (n - 1) / 2;
         
         // rounded coordinates of position
-        int x0 = (int) Math.round(position.getX());
-        int y0 = (int) Math.round(position.getY());
+        int x0 = (int) Math.round(position.x());
+        int y0 = (int) Math.round(position.y());
         
         // gradient components
         double gx = 0.0;
@@ -105,9 +105,9 @@ public class LocalGradientEstimator
         int r = (n - 1) / 2;
         
         // rounded coordinates of position
-        int x0 = (int) Math.round(position.getX());
-        int y0 = (int) Math.round(position.getY());
-        int z0 = (int) Math.round(position.getZ());
+        int x0 = (int) Math.round(position.x());
+        int y0 = (int) Math.round(position.y());
+        int z0 = (int) Math.round(position.z());
         
         // gradient components
         double gx = 0.0;
