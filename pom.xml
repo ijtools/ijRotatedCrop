@@ -22,7 +22,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <description>ImageJ/Fiji plugin to generate rotated crop images from 2D/3D images</description>
 
     <properties>
-        <maven.compiler.source>1.15</maven.compiler.source>
+        <maven.compiler.source>15</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
     </properties>
   
